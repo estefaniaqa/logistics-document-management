@@ -3,6 +3,14 @@
 Proyecto demo de portfolio desarrollado con **Google Apps Script, Google Sheets, HTML, CSS y JavaScript**.
 
 > Este repositorio es una versión demostrativa y anonimizada de una solución de gestión documental. No contiene información confidencial, datos reales de clientes, credenciales ni identificadores internos.
+>
+> ## Demo en vivo
+
+Podés probar la aplicación desde este enlace:
+
+[🚀 Abrir LogiDocs Demo](https://script.google.com/a/macros/ocasa.com/s/AKfycby15EWKqZgzS1gwNlN0oGEe-wUlH2BE7aL8GMsKo1sP3PNKRcuE7beoC7ejj23w3YBIcg/exec)
+
+> La aplicación utiliza datos ficticios y fue adaptada como versión de portfolio.
 
 ## Objetivo
 
