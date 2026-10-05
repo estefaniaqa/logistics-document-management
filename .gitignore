@@ -1,0 +1,11 @@
+# Local / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment / private files
+.env
+.env.*
+secrets.*
+credentials.*

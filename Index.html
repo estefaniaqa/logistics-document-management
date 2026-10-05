@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <?!= include('Styles'); ?>
+</head>
+
+<body>
+<div class="top-brand-bar"></div>
+
+<div id="app" class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-name">LOGIDOCS</div>
+      <div class="brand-subtitle">DOCUMENT MANAGEMENT</div>
+    </div>
+
+    <nav class="navigation">
+      <button class="nav-item active" data-view="dashboard">
+        <span class="nav-number">01.</span> Dashboard
+      </button>
+      <button class="nav-item" data-view="documentos">
+        <span class="nav-number">02.</span> Documentación
+      </button>
+      <button class="nav-item" data-view="reclamos">
+        <span class="nav-number">03.</span> Reclamos
+      </button>
+      <button class="nav-item" data-view="digitalizacion">
+        <span class="nav-number">04.</span> Digitalización
+      </button>
+      <button class="nav-item" data-view="usuarios">
+        <span class="nav-number">05.</span> Usuarios
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="portfolio-badge">PORTFOLIO DEMO</div>
+      <div id="currentUser" class="user-email">Cargando usuario...</div>
+      <div class="version">v1.0-demo</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <div id="sectionNumber" class="section-number">01.</div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <p id="pageDescription">Estado general de la operación documental.</p>
+      </div>
+
+      <button id="newDocumentButton" class="btn primary" type="button">
+        + Nuevo registro
+      </button>
+    </header>
+
+    <section id="view-dashboard" class="view active">
+      <div class="kpi-grid">
+        <article class="kpi-card info">
+          <span class="kpi-label">DOCUMENTOS</span>
+          <strong id="metricTotal" class="kpi-value">—</strong>
+          <span class="kpi-description">registros totales</span>
+        </article>
+
+        <article class="kpi-card warning">
+          <span class="kpi-label">PENDIENTES</span>
+          <strong id="metricPending" class="kpi-value">—</strong>
+          <span class="kpi-description">pendientes de completar</span>
+        </article>
+
+        <article class="kpi-card success">
+          <span class="kpi-label">DIGITALIZADOS</span>
+          <strong id="metricDigital" class="kpi-value">—</strong>
+          <span id="metricDigitalPercent" class="kpi-description">—</span>
+        </article>
+
+        <article class="kpi-card danger">
+          <span class="kpi-label">RECLAMOS ABIERTOS</span>
+          <strong id="metricClaims" class="kpi-value">—</strong>
+          <span class="kpi-description">requieren seguimiento</span>
+        </article>
+      </div>
+
+      <div class="section-header">
+        <div>
+          <span class="section-number">OPERACIÓN</span>
+          <h2>Últimos registros</h2>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Documento</th>
+              <th>Hoja de ruta</th>
+              <th>Remito</th>
+              <th>Cliente</th>
+              <th>Operador</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="recentDocuments">
+            <tr>
+              <td colspan="8" class="empty-table">Cargando información...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-documentos" class="view">
+      <div class="toolbar">
+        <input
+          id="documentSearch"
+          class="search-input"
+          type="search"
+          placeholder="Buscar hoja de ruta, remito, cliente, operador o reclamo...">
+        <button id="searchButton" class="btn secondary" type="button">Buscar</button>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Recepción</th>
+              <th>Tipo</th>
+              <th>Hoja de ruta</th>
+              <th>Remito</th>
+              <th>Cliente</th>
+              <th>Operador</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="documentsTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-reclamos" class="view">
+      <div class="info-alert">
+        <strong>Gestión de reclamos</strong>
+        <p>Vista preparada para vincular incidentes con documentación y operadores logísticos.</p>
+      </div>
+    </section>
+
+    <section id="view-digitalizacion" class="view">
+      <div class="info-alert">
+        <strong>Seguimiento de digitalización</strong>
+        <p>Seguimiento de lotes, traslado, recepción, digitalización y disponibilidad documental.</p>
+      </div>
+    </section>
+
+    <section id="view-usuarios" class="view">
+      <div class="info-alert">
+        <strong>Usuarios y roles</strong>
+        <p>Administración conceptual de permisos para recepción, reclamos, supervisión y administración.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="documentModal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <div>
+        <span class="section-number">NUEVO</span>
+        <h2 id="modalTitle">Registro documental</h2>
+        <p>Ingreso manual a Mesa de Entrada.</p>
+      </div>
+      <button id="closeModalButton" class="close-button" type="button" aria-label="Cerrar">×</button>
+    </div>
+
+    <form id="documentForm">
+      <div class="form-section">
+        <h3>01. Clasificación</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="tipoDocumento">TIPO DE DOCUMENTO *</label>
+            <select id="tipoDocumento" required></select>
+          </div>
+          <div class="field">
+            <label for="tipoOperacion">OPERACIÓN *</label>
+            <select id="tipoOperacion" required></select>
+          </div>
+          <div class="field">
+            <label for="segmento">SEGMENTO</label>
+            <select id="segmento"></select>
+          </div>
+          <div class="field">
+            <label for="prioridad">PRIORIDAD</label>
+            <select id="prioridad"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>02. Identificación</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="hdr">N° HOJA DE RUTA</label>
+            <input id="hdr" type="text" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="remito">N° REMITO</label>
+            <input id="remito" type="text" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="documentoExterno">FACTURA / DOCUMENTO EXTERNO</label>
+            <input id="documentoExterno" type="text">
+          </div>
+          <div id="containerField" class="field hidden">
+            <label for="contenedor">N° CONTENEDOR</label>
+            <input id="contenedor" type="text">
+          </div>
+          <div class="field">
+            <label for="fechaDocumento">FECHA DOCUMENTO</label>
+            <input id="fechaDocumento" type="date">
+          </div>
+          <div class="field">
+            <label for="cantidad">CANTIDAD DOCS / FOLIOS</label>
+            <input id="cantidad" type="number" min="1" value="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>03. Origen y trazabilidad</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="cliente">CLIENTE / CUENTA *</label>
+            <input id="cliente" type="text" required placeholder="Cliente Demo A">
+          </div>
+          <div class="field">
+            <label for="operador">OPERADOR LOGÍSTICO / TRANSPORTE</label>
+            <input id="operador" type="text" placeholder="Operador Logístico A">
+          </div>
+          <div class="field">
+            <label for="origen">ORIGEN / DEPÓSITO *</label>
+            <input id="origen" type="text" required placeholder="Centro Logístico Norte">
+          </div>
+          <div class="field">
+            <label for="canal">CANAL DE ORIGEN</label>
+            <select id="canal"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>04. Reclamo</h3>
+        <label class="checkbox-field">
+          <input id="reclamoAsociado" type="checkbox">
+          <span>Esta documentación está asociada a un reclamo.</span>
+        </label>
+
+        <div id="claimFields" class="form-grid hidden">
+          <div class="field">
+            <label for="idReclamo">ID RECLAMO</label>
+            <input id="idReclamo" type="text">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>05. Observaciones</h3>
+        <div class="field">
+          <label for="observaciones">OBSERVACIONES DE RECEPCIÓN</label>
+          <textarea id="observaciones" rows="4"></textarea>
+        </div>
+      </div>
+
+      <div id="formMessage" class="form-message hidden" role="alert"></div>
+
+      <div class="modal-actions">
+        <button id="cancelButton" class="btn ghost" type="button">Cancelar</button>
+        <button id="saveButton" class="btn primary" type="submit">Registrar documentación</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<?!= include('JavaScript'); ?>
+</body>
+</html>

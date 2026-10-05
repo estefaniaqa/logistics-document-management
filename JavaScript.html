@@ -1,0 +1,381 @@
+<script>
+const App = {
+  state: {
+    options: null,
+    documents: [],
+    currentView: 'dashboard'
+  },
+
+  views: {
+    dashboard: {
+      number: '01.',
+      title: 'Dashboard',
+      description: 'Estado general de la operación documental.'
+    },
+    documentos: {
+      number: '02.',
+      title: 'Documentación',
+      description: 'Registro y trazabilidad de documentación.'
+    },
+    reclamos: {
+      number: '03.',
+      title: 'Reclamos',
+      description: 'Seguimiento de incidentes y evidencias.'
+    },
+    digitalizacion: {
+      number: '04.',
+      title: 'Digitalización',
+      description: 'Traslado, digitalización y disponibilidad documental.'
+    },
+    usuarios: {
+      number: '05.',
+      title: 'Usuarios',
+      description: 'Usuarios, roles y responsabilidades.'
+    }
+  }
+};
+
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+function initializeApp() {
+  bindEvents();
+
+  google.script.run
+    .withSuccessHandler(handleInitialData)
+    .withFailureHandler(handleServerError)
+    .getInitialData();
+}
+
+function bindEvents() {
+  document.querySelectorAll('.nav-item').forEach(button => {
+    button.addEventListener(
+      'click',
+      () => switchView(button.dataset.view)
+    );
+  });
+
+  document.getElementById('newDocumentButton')
+    .addEventListener('click', openDocumentModal);
+
+  document.getElementById('closeModalButton')
+    .addEventListener('click', closeDocumentModal);
+
+  document.getElementById('cancelButton')
+    .addEventListener('click', closeDocumentModal);
+
+  document.getElementById('documentForm')
+    .addEventListener('submit', submitDocument);
+
+  document.getElementById('tipoDocumento')
+    .addEventListener('change', updateConditionalFields);
+
+  document.getElementById('reclamoAsociado')
+    .addEventListener('change', updateConditionalFields);
+
+  document.getElementById('searchButton')
+    .addEventListener('click', searchDocuments);
+
+  document.getElementById('documentSearch')
+    .addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        searchDocuments();
+      }
+    });
+}
+
+function handleInitialData(data) {
+  App.state.options = data.options;
+  App.state.documents = data.documents || [];
+
+  document.getElementById('currentUser').textContent = data.user;
+
+  populateFormOptions();
+  renderMetrics(data.metrics);
+  renderDocuments(App.state.documents);
+}
+
+function switchView(viewName) {
+  const config = App.views[viewName];
+
+  if (!config) {
+    return;
+  }
+
+  App.state.currentView = viewName;
+
+  document.querySelectorAll('.view')
+    .forEach(view => view.classList.remove('active'));
+
+  document.querySelectorAll('.nav-item')
+    .forEach(button => button.classList.remove('active'));
+
+  document.getElementById(`view-${viewName}`)
+    .classList.add('active');
+
+  document.querySelector(`[data-view="${viewName}"]`)
+    .classList.add('active');
+
+  document.getElementById('sectionNumber').textContent = config.number;
+  document.getElementById('pageTitle').textContent = config.title;
+  document.getElementById('pageDescription').textContent = config.description;
+}
+
+function populateFormOptions() {
+  const options = App.state.options;
+
+  fillSelect('tipoDocumento', options.tiposDocumento, 'Seleccionar...');
+  fillSelect('tipoOperacion', options.operaciones, 'Seleccionar...');
+  fillSelect('segmento', options.segmentos, 'Seleccionar...');
+  fillSelect('prioridad', options.prioridades, null, 'Normal');
+  fillSelect('canal', options.canales, 'Seleccionar...');
+}
+
+function fillSelect(elementId, values, placeholder, selectedValue) {
+  const select = document.getElementById(elementId);
+  select.innerHTML = '';
+
+  if (placeholder) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = placeholder;
+    select.appendChild(option);
+  }
+
+  values.forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+
+    if (value === selectedValue) {
+      option.selected = true;
+    }
+
+    select.appendChild(option);
+  });
+}
+
+function openDocumentModal() {
+  const modal = document.getElementById('documentModal');
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeDocumentModal() {
+  const modal = document.getElementById('documentModal');
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function updateConditionalFields() {
+  const type = document.getElementById('tipoDocumento').value;
+  const claim = document.getElementById('reclamoAsociado').checked;
+
+  document.getElementById('containerField')
+    .classList.toggle(
+      'hidden',
+      type !== 'Ingreso de contenedor'
+    );
+
+  document.getElementById('claimFields')
+    .classList.toggle('hidden', !claim);
+}
+
+function submitDocument(event) {
+  event.preventDefault();
+  hideFormMessage();
+
+  const data = {
+    tipoDocumento: valueOf('tipoDocumento'),
+    tipoOperacion: valueOf('tipoOperacion'),
+    segmento: valueOf('segmento'),
+    prioridad: valueOf('prioridad'),
+    hdr: valueOf('hdr'),
+    remito: valueOf('remito'),
+    documentoExterno: valueOf('documentoExterno'),
+    contenedor: valueOf('contenedor'),
+    fechaDocumento: valueOf('fechaDocumento'),
+    cantidad: valueOf('cantidad'),
+    cliente: valueOf('cliente'),
+    operador: valueOf('operador'),
+    origen: valueOf('origen'),
+    canal: valueOf('canal'),
+    reclamoAsociado: document.getElementById('reclamoAsociado').checked,
+    idReclamo: valueOf('idReclamo'),
+    observaciones: valueOf('observaciones')
+  };
+
+  setSavingState(true);
+
+  google.script.run
+    .withSuccessHandler(result => {
+      setSavingState(false);
+      document.getElementById('documentForm').reset();
+      populateFormOptions();
+      updateConditionalFields();
+      closeDocumentModal();
+      showToast(`${result.message} · ${result.id}`);
+      refreshApplication();
+    })
+    .withFailureHandler(error => {
+      setSavingState(false);
+      showFormError(
+        error.message || 'No fue posible guardar el registro.'
+      );
+    })
+    .createDocument(data);
+}
+
+function searchDocuments() {
+  const query = valueOf('documentSearch');
+
+  google.script.run
+    .withSuccessHandler(records => {
+      App.state.documents = records || [];
+      renderDocuments(App.state.documents);
+    })
+    .withFailureHandler(handleServerError)
+    .searchDocuments(query);
+}
+
+function refreshApplication() {
+  google.script.run
+    .withSuccessHandler(data => {
+      App.state.documents = data.documents || [];
+      renderMetrics(data.metrics);
+      renderDocuments(App.state.documents);
+    })
+    .withFailureHandler(handleServerError)
+    .getInitialData();
+}
+
+function renderMetrics(metrics) {
+  setText('metricTotal', metrics.total);
+  setText('metricPending', metrics.pendientes);
+  setText('metricDigital', metrics.digitalizados);
+  setText('metricClaims', metrics.reclamosAbiertos);
+  setText('metricDigitalPercent', `${metrics.porcentajeDigitalizado}% del total`);
+}
+
+function renderDocuments(records) {
+  renderRecentDocuments(records.slice(0, 10));
+
+  const body = document.getElementById('documentsTable');
+
+  if (!records.length) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="9" class="empty-table">
+          No se encontraron registros.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  body.innerHTML = records.map(record => `
+    <tr>
+      <td>${escapeHtml(record['ID Registro'])}</td>
+      <td>${escapeHtml(record['Fecha/Hora Recepción'])}</td>
+      <td>${escapeHtml(record['Tipo Documento'])}</td>
+      <td>${escapeHtml(record['N° Hoja de Ruta'])}</td>
+      <td>${escapeHtml(record['N° Remito'])}</td>
+      <td>${escapeHtml(record['Cliente / Cuenta'])}</td>
+      <td>${escapeHtml(record['Operador Logístico / Transporte'])}</td>
+      <td>${escapeHtml(record['Prioridad'])}</td>
+      <td>${escapeHtml(record['Estado Documental'])}</td>
+    </tr>
+  `).join('');
+}
+
+function renderRecentDocuments(records) {
+  const body = document.getElementById('recentDocuments');
+
+  if (!records.length) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="8" class="empty-table">
+          Todavía no existen registros.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  body.innerHTML = records.map(record => `
+    <tr>
+      <td>${escapeHtml(record['ID Registro'])}</td>
+      <td>${escapeHtml(record['Tipo Documento'])}</td>
+      <td>${escapeHtml(record['N° Hoja de Ruta'])}</td>
+      <td>${escapeHtml(record['N° Remito'])}</td>
+      <td>${escapeHtml(record['Cliente / Cuenta'])}</td>
+      <td>${escapeHtml(record['Operador Logístico / Transporte'])}</td>
+      <td>${escapeHtml(record['Prioridad'])}</td>
+      <td>${escapeHtml(record['Estado Documental'])}</td>
+    </tr>
+  `).join('');
+}
+
+function valueOf(id) {
+  const element = document.getElementById(id);
+  return element ? element.value.trim() : '';
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function setSavingState(saving) {
+  const button = document.getElementById('saveButton');
+
+  button.disabled = saving;
+  button.textContent =
+    saving ? 'Registrando...' : 'Registrar documentación';
+}
+
+function showFormError(message) {
+  const element = document.getElementById('formMessage');
+  element.textContent = message;
+  element.classList.remove('hidden');
+}
+
+function hideFormMessage() {
+  document.getElementById('formMessage').classList.add('hidden');
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+
+  toast.textContent = message;
+  toast.classList.remove('hidden');
+
+  window.setTimeout(() => {
+    toast.classList.add('hidden');
+  }, 4000);
+}
+
+function handleServerError(error) {
+  const message =
+    error && error.message
+      ? error.message
+      : 'Se produjo un error inesperado.';
+
+  showToast(message);
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+</script>
